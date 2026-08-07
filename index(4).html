@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wikihonyaku</title>
+<style>
+:root{
+  --bg:#f5f4ef;
+  --panel:#ffffff;
+  --ink:#1e2529;
+  --muted:#6f777d;
+  --line:#dedbd2;
+  --accent:#2f5d50;
+  --soft:#e7efe9;
+  --warn:#9b3d2f;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+}
+header{
+  padding:28px 20px 18px;
+  border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.75);
+  backdrop-filter:blur(10px);
+  position:sticky;top:0;z-index:2;
+}
+.wrap{max-width:920px;margin:auto}
+.brand{display:flex;align-items:baseline;gap:12px}
+h1{font-size:28px;margin:0;letter-spacing:.02em}
+.tag{font-size:13px;color:var(--muted)}
+main{padding:28px 20px 56px}
+.controls{
+  display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px
+}
+button{
+  border:0;border-radius:12px;padding:12px 16px;
+  font-weight:700;cursor:pointer;font-size:14px
+}
+.primary{background:var(--accent);color:white}
+.secondary{background:white;color:var(--ink);border:1px solid var(--line)}
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:22px;
+  box-shadow:0 10px 30px rgba(0,0,0,.04);
+  margin-bottom:16px;
+}
+.kicker{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.title{font-size:30px;font-weight:800;line-height:1.25;margin:6px 0}
+.subtitle{font-size:15px;color:var(--muted);margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.stat{background:#f8f8f5;border-radius:14px;padding:14px}
+.stat b{display:block;font-size:22px;margin-top:4px}
+.badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:999px;
+  background:var(--soft);color:var(--accent);font-weight:700;font-size:13px
+}
+.badge.warn{background:#f7e7e3;color:var(--warn)}
+.section-title{font-size:17px;font-weight:800;margin:4px 0 12px}
+.extract{line-height:1.85;white-space:pre-wrap}
+.compare{
+  display:grid;grid-template-columns:1fr 1fr;gap:14px
+}
+.box{
+  border:1px solid var(--line);border-radius:14px;padding:16px;background:#fbfbf8
+}
+.box h3{margin:0 0 8px;font-size:15px}
+.small{font-size:13px;color:var(--muted);line-height:1.6}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.progress{
+  height:10px;background:#eceae3;border-radius:999px;overflow:hidden;margin-top:8px
+}
+.progress > div{height:100%;background:var(--accent);width:0}
+.hidden{display:none}
+.error{color:var(--warn);font-weight:700}
+footer{padding:24px 20px 50px;color:var(--muted);font-size:12px}
+@media(max-width:700px){
+  .stats,.compare{grid-template-columns:1fr}
+  .title{font-size:24px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap brand">
+    <h1>Wiki補完</h1>
+    <div class="tag">English wiki→Japanese wiki</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="controls">
+    <button id="randomBtn" class="primary">🎲 ランダム記事を探す</button>
+    <button id="gapBtn" class="secondary">🔎 不足記事が出るまで探す</button>
+  </div>
+
+  <div id="status" class="card">
+    <div class="kicker">Prototype</div>
+    <div class="title">探す</div>
+    <div class="subtitle">日本語版がない、または情報量が少ない記事を見つけて表示します。</div>
+    <div class="small">「ランダム記事を探す」を押すと開始します。</div>
+  </div>
+
+  <div id="result" class="hidden">
+    <section class="card">
+      <div class="kicker">Random Article</div>
+      <div id="enTitle" class="title"></div>
+      <div id="jaTitle" class="subtitle"></div>
+      <div id="badge"></div>
+
+      <div class="stats">
+        <div class="stat"><span class="small">英語版サイズ</span><b id="enSize">-</b></div>
+        <div class="stat"><span class="small">日本語版サイズ</span><b id="jaSize">-</b></div>
+        <div class="stat"><span class="small">不足スコア</span><b id="score">-</b></div>
+      </div>
+
+      <div class="small">不足度</div>
+      <div class="progress"><div id="bar"></div></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">記事比較</div>
+      <div class="compare">
+        <div class="box">
+          <h3>🇬🇧 English Wikipedia</h3>
+          <div id="enExtract" class="extract"></div>
+          <p class="small"><a id="enLink" target="_blank" rel="noopener">英語版を開く</a></p>
+        </div>
+        <div class="box">
+          <h3>🇯🇵 日本語版</h3>
+          <div id="jaExtract" class="extract"></div>
+          <p class="small"><a id="jaLink" target="_blank" rel="noopener">日本語版を開く</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">英語版からの補完候補</div>
+      <div id="supplement" class="extract"></div>
+      <div id="translateNote" class="small" style="margin-top:14px"></div>
+    </section>
+  </div>
+</main>
+
+<footer class="wrap">
+  Wikipedia / Wikimedia の公開APIを利用したフロントエンド試作です。
+  本番公開時は、翻訳結果の帰属・ライセンス表示、キャッシュ、API負荷制御を追加してください。
+</footer>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+
+function fmt(n){
+  if(n==null) return "なし";
+  if(n>100000) return (n/1000).toFixed(0)+"kB";
+  if(n>10000) return (n/1000).toFixed(1)+"kB";
+  return n.toLocaleString()+"B";
+}
+
+async function api(lang, params){
+  const url = new URL(`https://${lang}.wikipedia.org/w/api.php`);
+  Object.entries({
+    origin:"*",
+    format:"json",
+    formatversion:"2",
+    ...params
+  }).forEach(([k,v])=>url.searchParams.set(k,v));
+  const r = await fetch(url);
+  if(!r.ok) throw new Error("Wikipedia API error");
+  return r.json();
+}
+
+async function getRandomEnglish(){
+  const data = await api("en",{
+    action:"query",
+    generator:"random",
+    grnnamespace:"0",
+    grnlimit:"1",
+    prop:"extracts|info|langlinks",
+    exintro:"1",
+    explaintext:"1",
+    inprop:"url",
+    lllang:"ja",
+    lllimit:"1"
+  });
+  return data.query.pages[0];
+}
+
+async function getJapanese(title){
+  const data = await api("ja",{
+    action:"query",
+    titles:title,
+    prop:"extracts|info",
+    exintro:"1",
+    explaintext:"1",
+    inprop:"url"
+  });
+  const p = data.query.pages[0];
+  return p.missing ? null : p;
+}
+
+function calcScore(enLen, jaLen){
+  if(!jaLen) return 100;
+  const ratio = enLen / Math.max(jaLen,1);
+  let s = 0;
+  if(ratio >= 8) s += 80;
+  else if(ratio >= 5) s += 65;
+  else if(ratio >= 3) s += 50;
+  else if(ratio >= 2) s += 35;
+  else if(ratio >= 1.5) s += 20;
+  if(enLen > 30000) s += 10;
+  if(jaLen < 5000) s += 10;
+  return Math.min(100,s);
+}
+
+// Firefox / Microsoft Edge / Chrome / Safari 共通：Cloudflare Worker 経由で翻訳する。
+// Worker をデプロイしたあと、下のURLだけ自分の workers.dev URL に書き換えてください。
+const TRANSLATE_API_URL = "https://wikihonyaku-translate.teru-jb.workers.dev";
+
+function splitForTranslation(text, maxChars = 1200){
+  const clean = (text || "").trim();
+  if(!clean) return [];
+
+  const sentences = clean.match(/[^.!?。！？]+[.!?。！？]?/g) || [clean];
+  const chunks = [];
+  let current = "";
+
+  for(const sentence of sentences){
+    if((current + sentence).length <= maxChars){
+      current += sentence;
+    }else{
+      if(current.trim()) chunks.push(current.trim());
+
+      // 1文自体が長すぎる場合も安全に分割
+      if(sentence.length > maxChars){
+        for(let i=0; i<sentence.length; i+=maxChars){
+          chunks.push(sentence.slice(i, i + maxChars).trim());
+        }
+        current = "";
+      }else{
+        current = sentence;
+      }
+    }
+  }
+
+  if(current.trim()) chunks.push(current.trim());
+  return chunks;
+}
+
+async function translateText(text){
+  if(!text || !text.trim()) return "";
+
+  if(TRANSLATE_API_URL.includes("YOUR-WORKER")){
+    throw new Error("TRANSLATE_API_URL に Cloudflare Worker のURLを設定してください。");
+  }
+
+  const chunks = splitForTranslation(text);
+  const translatedChunks = [];
+
+  for(const chunk of chunks){
+    const r = await fetch(TRANSLATE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ text: chunk })
+    });
+
+    if(!r.ok){
+      let detail = "";
+      try{
+        const err = await r.json();
+        detail = err.error ? `: ${err.error}` : "";
+      }catch(e){}
+      throw new Error(`翻訳APIエラー (${r.status})${detail}`);
+    }
+
+    const data = await r.json();
+    if(!data.translated_text){
+      throw new Error("翻訳結果が空でした。");
+    }
+
+    translatedChunks.push(data.translated_text.trim());
+  }
+
+  return translatedChunks.join("\n\n");
+}
+
+async function renderOne(){
+  $("status").classList.remove("hidden");
+  $("status").innerHTML = '<div class="title">探索中…</div><div class="small">英語版記事と日本語版の対応を調べています。</div>';
+  $("result").classList.add("hidden");
+
+  try{
+    const en = await getRandomEnglish();
+    const jaLang = en.langlinks && en.langlinks[0] ? en.langlinks[0].title : null;
+    const ja = jaLang ? await getJapanese(jaLang) : null;
+
+    const enLen = en.length || 0;
+    const jaLen = ja ? (ja.length || 0) : null;
+    const score = calcScore(enLen, jaLen);
+
+    $("enTitle").textContent = en.title;
+    $("jaTitle").textContent = ja ? ja.title : "日本語版なし";
+    $("enSize").textContent = fmt(enLen);
+    $("jaSize").textContent = fmt(jaLen);
+    $("score").textContent = score + "/100";
+    $("bar").style.width = score + "%";
+
+    $("enExtract").textContent = en.extract || "概要を取得できませんでした。";
+    $("enLink").href = en.fullurl || `https://en.wikipedia.org/wiki/${encodeURIComponent(en.title)}`;
+
+    if(ja){
+      $("jaExtract").textContent = ja.extract || "概要を取得できませんでした。";
+      $("jaLink").href = ja.fullurl || `https://ja.wikipedia.org/wiki/${encodeURIComponent(ja.title)}`;
+      $("jaLink").style.display = "";
+    }else{
+      $("jaExtract").textContent = "この記事に対応する日本語版は見つかりませんでした。";
+      $("jaLink").style.display = "none";
+    }
+
+    const badge = $("badge");
+    if(!ja){
+      badge.innerHTML = '<span class="badge warn">日本語版未収録</span>';
+    }else if(score >= 60){
+      badge.innerHTML = '<span class="badge warn">日本語版の情報量が少ない可能性</span>';
+    }else{
+      badge.innerHTML = '<span class="badge">日本語版あり</span>';
+    }
+
+    let supplementText = "";
+
+    try{
+      const translated = await translateText((en.extract || "").slice(0,3000));
+
+      if(translated){
+        supplementText = translated;
+        $("translateNote").textContent =
+          "Cloudflare Worker 経由で英語版概要を日本語へ自動翻訳しています。Firefox / Microsoft Edge / Chrome / Safari で利用できます。";
+      }else{
+        supplementText = "翻訳結果を取得できませんでした。";
+        $("translateNote").textContent =
+          "翻訳結果が空でした。記事取得自体は正常です。";
+      }
+    }catch(translateError){
+      supplementText = "［翻訳未設定］\n\n" + (en.extract || "英語版概要なし");
+      $("translateNote").textContent =
+        "記事取得は成功しました。翻訳だけ利用できません。Cloudflare Worker を公開し、TRANSLATE_API_URL を設定すると日本語になります。";
+      console.warn("Translation failed:", translateError);
+    }
+
+    $("supplement").textContent = supplementText;
+
+    $("status").classList.add("hidden");
+    $("result").classList.remove("hidden");
+
+    return {score};
+  }catch(err){
+    $("status").innerHTML =
+      '<div class="error">Wikipediaの記事取得に失敗しました。</div><div class="small">'+
+      String(err.message || err)+'</div>';
+    return {score:0};
+  }
+}
+
+async function findGap(){
+  $("gapBtn").disabled = true;
+  for(let i=0;i<8;i++){
+    const r = await renderOne();
+    if(r.score >= 60) break;
+  }
+  $("gapBtn").disabled = false;
+}
+
+$("randomBtn").addEventListener("click", renderOne);
+$("gapBtn").addEventListener("click", findGap);
+</script>
+</body>
+</html>
